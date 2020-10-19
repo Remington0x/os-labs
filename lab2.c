@@ -49,6 +49,8 @@ int main() {
         return -1;
     } else if (id1 == 0) {
         //it is child
+        close(pipe2[0]);
+        close(pipe2[1]);
         CreateChild(pipe1, file1);
     } else {
         //it is parent and there is one child
@@ -58,6 +60,8 @@ int main() {
             return -1;
         } else if (id2 == 0) {
             //it is child
+            close(pipe1[0]);
+            close(pipe1[1]);
             CreateChild(pipe2, file2);
         } else {
             //it is parent and there are two children
@@ -93,9 +97,9 @@ int main() {
             }
             //here exit returned
             close(pipe1[1]);
-            close(pipe1[0]);
+            //close(pipe1[0]);
             close(pipe2[1]);
-            close(pipe2[0]);
+            //close(pipe2[0]);
             fclose(file1);
             fclose(file2);
 
@@ -110,6 +114,7 @@ int main() {
 
 int CreateChild(int pipe[2], FILE* file) {
     int i_dup, i_exec;
+    close(pipe[1]);
     i_dup = dup2(pipe[0], fileno(stdin));
     if (i_dup == -1) {
         printf("dup2 error\n");

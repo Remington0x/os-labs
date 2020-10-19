@@ -16,14 +16,8 @@ int main(void) {
         n = get_length(str);
         str[n] = '\n';
         printf("%s", str);
-        printf("lock\n");
         fflush(stdout);
-        while (1==1) {
-            if (scanf("%c", &c) <= 0)
-                return 0;
-        }
     }
-    printf("quit\n");
-    fflush(stdout);
+    
     return 0;
 }

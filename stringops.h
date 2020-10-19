@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #define FILENAME_LENGTH 255
-#define STRLENGTH 4000 
+#define STRLENGTH 40000 
 
 void strnull(char *str);
 
