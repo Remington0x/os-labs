@@ -315,7 +315,7 @@ int main(int argc, char * argv[]) {
     int window;
     std::cout << "Enter window size. It has to be positive odd integer\n";
     std::cin >> window;
-    if (window < 0 || window % 2 = 0) {
+    if (window < 0 || (window % 2 == 0)) {
         std::cout << "Wrong window size! Shutting down...\n";
         return -1;
     }
