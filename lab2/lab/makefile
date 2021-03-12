@@ -16,4 +16,4 @@ lab2-child.out: stringops.o lab2-child.o
 	gcc stringops.o lab2-child.o -o lab2-child.out
 
 clean:
-	rm -rf *.o lab26.out
+	rm -rf *.o *.out a b
