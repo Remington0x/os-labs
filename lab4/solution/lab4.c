@@ -94,33 +94,37 @@ int main() {
         return 8;
     }
 
-    //pid_t id1 = fork();
+    pid_t id1 = fork();
 
-    // if (id1 == -1) {
-    //     printf("Error creating process\n");
-    //     return 9;
-    // }
-    //
-    // if (id = 0) {
-    //     //this is child
-    //     if (pthread_mutex_lock(mutex) != 0) {
-    //     	printf("Error mutex lock\n");
-    //    		return 8;
-	//    	}
-    //
- 	// 	char* argv[] = {file1, mutex1_n, area1_n, size_data1_n, (char *) NULL};
-	//     if (execv("child.out", argv) == -1) {
-	// 		printf("Error exexv\n");
-	// 		printf("%s\n", strerror(errno));
-	//     	return 9;
-	//     }
-    //
-	//     if (pthread_mutex_unlock(mutex) != 0) {
-	// 		printf("Error mutex unlock\n");
-	// 		return 10;
-	// 	}
-    //
-    // }
+    if (id1 == -1) {
+        printf("Error creating process\n");
+        return 9;
+    }
+
+    if (id1 = 0) {
+        //this is child
+        if (pthread_mutex_lock(mutex1) != 0) {
+        	printf("Error mutex lock\n");
+       		return 8;
+	   	}
+
+ 		char* argv[] = {file1, mutex1_n, area1_n, size_data1_n, (char *) NULL};
+	    if (execv("child.out", argv) == -1) {
+			printf("Error exexv\n");
+			printf("%s\n", strerror(errno));
+	    	return 9;
+	    }
+
+	    if (pthread_mutex_unlock(mutex1) != 0) {
+			printf("Error mutex unlock\n");
+			return 10;
+		}
+
+    } else
+    if (id1 != 0) {
+        //this is parent
+        
+    }
 
 
 
