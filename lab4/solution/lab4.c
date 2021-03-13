@@ -9,20 +9,21 @@
 #include <pthread.h>
 #include <errno.h>
 #include <string.h>
+#include "stringops.h"
 
 int main() {
-    char file1[255], file2[255];
+    char file1[FILENAME_LENGTH], file2[FILENAME_LENGTH];
     printf("Enter names of file1 and file2\n");
     scanf("%s", file1);
     scanf("%s", file2);
 
-    FILE *f1 = fopen(file1, "w");
-    FILE *f2 = fopen(file2, "w");
+    //FILE *f1 = fopen(file1, "w");
+    //FILE *f2 = fopen(file2, "w");
 
-    if (f1 == NULL || f2 == NULL) {
-        printf("Error opening files\n");
-        return 1;
-    }
+    // if (f1 == NULL || f2 == NULL) {
+    //     printf("Error opening files\n");
+    //     return 1;
+    // }
 
     char area1_n[] = "area1";
     char mutex1_n[] = "mutex1";
@@ -101,48 +102,107 @@ int main() {
         return 9;
     }
 
-    if (id1 = 0) {
+    if (id1 == 0) {
         //this is child
-        if (pthread_mutex_lock(mutex1) != 0) {
-        	printf("Error mutex lock\n");
-       		return 8;
-	   	}
 
  		char* argv[] = {file1, mutex1_n, area1_n, size_data1_n, (char *) NULL};
-	    if (execv("child.out", argv) == -1) {
-			printf("Error exexv\n");
+	    if (execv("lab4-child", argv) == -1) {
+			printf("Error execv1\n");
 			printf("%s\n", strerror(errno));
 	    	return 9;
 	    }
 
-	    if (pthread_mutex_unlock(mutex1) != 0) {
-			printf("Error mutex unlock\n");
-			return 10;
-		}
+    }
+    //this is parent
+    pid_t id2 = fork();
 
-    } else
-    if (id1 != 0) {
-        //this is parent
-        
+    if (id2 == -1) {
+        printf("Error creating process\n");
+        return 9;
     }
 
+    if (id2 == 0) {
+        //this is second child
 
+     	char* argv[] = {file2, mutex2_n, area2_n, size_data2_n, (char *) NULL};
+	    if (execv("lab4-child", argv) == -1) {
+			printf("Error execv2\n");
+			printf("%s\n", strerror(errno));
+	    	return 9;
+	    }
+    }
 
+    //this is parent and there are two children
 
+    *data_s1 = 0;
+    *data_s2 = 0;
 
+    // pthread_mutex_unlock(mutex1);
+    // pthread_mutex_unlock(mutex2);
+    if (pthread_mutex_unlock(mutex1) != 0 || pthread_mutex_unlock(mutex2) != 0) {
+        printf("Error mutex unlock\n");
+        return 8;
+    }
 
+    char str[STRLENGTH];
+    strnull(str);
+    while (1 == 1) {
+        printf("Enter string\n");
+        scanf("%s", &str);
 
+        if (is_exit(str) == 1) {
+            if (pthread_mutex_lock(mutex1) != 0 || pthread_mutex_lock(mutex2) != 0) {
+                printf("Error mutex lock\n");
+                return 8;
+            }
 
+            *data_s1 = -1;
+            *data_s2 = -1;
 
+            if (pthread_mutex_unlock(mutex1) != 0 || pthread_mutex_unlock(mutex2) != 0) {
+                printf("Error mutex unlock\n");
+                return 8;
+            }
 
+            break;
+        }
 
+        int cnt;
 
+        if (get_length(str) > 10) { //to area2
+            if (pthread_mutex_lock(mutex2) != 0) {
+                printf("Error mutex lock\n");
+                return 8;
+            }
 
+            for (cnt = 0; str[cnt] != '\0'; ++cnt) {
+                data2[cnt] = str[cnt];
+            }
+            data2[cnt] = '\0';
+            *data_s2 = ++cnt;
 
+            if (pthread_mutex_unlock(mutex2) != 0) {
+                printf("Error mutex unlock\n");
+                return 8;
+            }
+        } else {    //to area1
+            if (pthread_mutex_lock(mutex1) != 0) {
+                printf("Error mutex lock\n");
+                return 8;
+            }
 
+            for (cnt = 0; str[cnt] != '\0'; ++cnt) {
+                data1[cnt] = str[cnt];
+            }
+            data1[cnt] = '\0';
+            *data_s1 = ++cnt;
 
-
-
+            if (pthread_mutex_unlock(mutex1) != 0) {
+                printf("Error mutex unlock\n");
+                return 8;
+            }
+        }
+    }
 
     return 0;
 }
