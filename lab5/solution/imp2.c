@@ -33,7 +33,7 @@ float Pi(int k) {
     float res = 1;
 
     for (int i = 1; i <= k; ++i) {
-        res *= (4 * i * i) / (4 * i * i - 1);
+        res *= (float)(4 * i * i) / (4 * i * i - 1);
     }
 
     res *= 2;
