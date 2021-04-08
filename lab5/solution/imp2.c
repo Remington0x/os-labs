@@ -5,6 +5,7 @@
 */
 
 #include "declaration.h"
+#include <math.h>
 
 float SinIntegral(float a, float b, float e) {
     float res = 0;
