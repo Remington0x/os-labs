@@ -67,6 +67,7 @@ private:
             if ((*ptr2)->left == nullptr) {
                 if ((*ptr2)->right == nullptr) {
                     //1.
+                    //std::cout << "Found node " << (*ptr2)->key << ", deleting\n";
                     ptr = *ptr2;
                     *ptr2 = nullptr;
                     delete ptr;
@@ -84,14 +85,23 @@ private:
                 delete ptr;
             } else {
                 //3.
-                ptr = (*ptr2)->left;
-                while (ptr->right->right != nullptr) {
-                    ptr = ptr->right;
+                ptr = (*ptr2);
+                if (ptr->left->right == nullptr) {
+                    (*ptr2)->key = ptr->left->key;
+                    btNode_t<T>* buff = ptr->left;
+                    (*ptr2)->left = (*ptr2)->left->left;
+                    delete buff;
+                } else {
+                    ptr = ptr->left;
+                    while (ptr->right->right != nullptr) {
+                        ptr = ptr->right;
+                    }
+
+                    (*ptr2)->key = ptr->right->key;
+                    btNode_t<T>* buff = ptr->right;
+                    ptr->right = ptr->right->left;
+                    delete buff;
                 }
-                (*ptr2)->key = ptr->right->key;
-                auto buff = ptr->right;
-                ptr->right = ptr->right->left;
-                delete buff;
             }
         }
     }
@@ -121,10 +131,21 @@ private:
         }
     }
 
+    void full_clear(btNode_t<T>** ptr) {
+        if (*ptr == nullptr) {
+            return;
+        }
+        full_clear(&(*ptr)->left);
+        full_clear(&(*ptr)->right);
+        delete *ptr;
+    }
+
 public:
     btNode_t<T>* root;
     topology_t() : root(nullptr) {}
-    ~topology_t() {}
+    ~topology_t() {
+        full_clear(&root);
+    }
 
     btNode_t<T>* find(T & key) {
         return find_rec(root, key);
@@ -132,7 +153,6 @@ public:
 
     void add(T & key) {
         add_rec(&root, key);
-        std::cout << "root now: " << root << std::endl;
     }
 
     void rm(T & key) {
