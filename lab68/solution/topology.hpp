@@ -17,7 +17,7 @@ public:
 //yet T is key type
 //if T will become a complex class replace "->key" with the "->key->k" for key
 //for T must be defined following operations:
-// ==
+// == < >
 template <class T>
 class topology_t {
 private:
