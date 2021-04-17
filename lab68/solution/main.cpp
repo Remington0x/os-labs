@@ -55,3 +55,63 @@ My variant is 34
         Ok: 0 // узел 17 недоступен
 
 */
+
+#include <iostream>
+#include "topology.hpp"
+
+int main() {
+    std::shared_ptr< topology_t<int> > Item(new topology_t<int>());
+    int q;
+    std::cout << "Enter command:\n1 -- add node\n2 -- del node\n3 -- print tree\n";
+    int key;
+    while (scanf("%d", &q) > 0) {
+        switch (q) {
+            case 1:
+                std::cout << "Enter key for new node\n";
+                std::cin >> key;
+                Item->add(key);
+                break;
+            case 2:
+                std::cout << "Enter key for node to delete\n";
+                std::cin >> key;
+                Item->rm(key);
+                break;
+            case 3:
+                Item->print();
+                break;
+            default:
+                std::cout << "No command found\n";
+                break;
+        }
+        std::cout << "Enter command:\n1 -- add node\n2 -- del node\n3 -- print tree\n";
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    return 0;
+}
