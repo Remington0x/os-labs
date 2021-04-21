@@ -1,12 +1,28 @@
 /*
+Инструкция по применению:
+$ make
+Делает mg и a.out.
+mg сгенерирует исходную матрицу для задания.
+a.out -- сама программа. Запускается с ключом -t <кол-во потоков>, либо без ключа,
+тогда она запустится в однопоточном режиме.
+
+Идея распараллеливания в следующем:
+В цикле for запускается нужное количество потоков, потом тоже в цикле for
+ожидается окончание их всех, и результат записывается во вторую матрицу, так как
+изменение исходной в процессе одного прохода невозможно. Таким образом матрица
+обходится до тех пор, пока количество оставшихся элементов не станет меньше
+количества потоков. Для оставшихся элементов запускается соответствующее
+количество потоков и так же ожидается их завершение и запись результата во
+вторую матрицу.
+
 окно -- целое положительное нечетное число
 предполагается, что окно не может быть больше размера матрицы
 */
 
-#include <iostream>
-#include <fstream>
+#include <stdio.h>
 #include <pthread.h>
-#include <ctime>
+#include <time.h>
+#include <stdlib.h>
 
 typedef struct args_tag {
     int ** matrix;
@@ -60,11 +76,8 @@ void *median(void *a) {
 
     int * arr = (int*)malloc(sizeof(int) * window * window);
     if (arr == NULL) {
-        std::cout << "malloc error in int median()\n";
+        printf("malloc error in int median()\n");
     }
-    //std::cout << "allocd arr int median\n";
-
-    //std::cout << "Elem is: " << matrix[elem_i][elem_j] << std::endl;
 
     int arr_i = 0;
 
@@ -73,21 +86,14 @@ void *median(void *a) {
     int plus_i = elem_i + window / 2;
     int plus_j = elem_j + window / 2;
 
-    //std::cout << "minus_i = " << minus_i << std::endl;
-    //std::cout << "minus_j = " << minus_j << std::endl;
-    //std::cout << "plus_i = " << plus_i << std::endl;
-    //std::cout << "plus_j = " << plus_j << std::endl;
-
     int i_out;
     int j_out;
 
     int out_items;
 
     if (minus_i < 0) {  //up
-        //std::cout << "up\n";
         i_out = -minus_i;
         if (minus_j < 0) { //left up
-            //std::cout << "Its left up\n";
             j_out = -minus_j;
             out_items = i_out * (window - j_out) + j_out * (window - i_out) + i_out * j_out;
 
@@ -103,7 +109,6 @@ void *median(void *a) {
             }
         } else
         if (plus_j < size_x) { //only up
-            //std::cout << "Its up\n";
             j_out = 0;
             out_items = i_out * (window - j_out) + j_out * (window - i_out) + i_out * j_out;
 
@@ -119,7 +124,6 @@ void *median(void *a) {
             }
         } else
         if (plus_j >= size_x) {    //right up
-            //std::cout << "Its right up\n";
             j_out = plus_j - size_x + 1;
             out_items = i_out * (window - j_out) + j_out * (window - i_out) + i_out * j_out;
 
@@ -136,10 +140,8 @@ void *median(void *a) {
         }
     } else
     if (plus_j >= size_x)  { //right
-        //std::cout << "right\n";
         j_out = plus_j - size_x + 1;
         if (plus_i < size_y) { //only right
-            //std::cout << "Its right\n";
             i_out = 0;
             out_items = i_out * (window - j_out) + j_out * (window - i_out) + i_out * j_out;
 
@@ -155,7 +157,6 @@ void *median(void *a) {
             }
         } else
         if (plus_i >= size_y) {  //right down
-            //std::cout << "Its right down\n";
             i_out = plus_i - size_y + 1;
             out_items = i_out * (window - j_out) + j_out * (window - i_out) + i_out * j_out;
 
@@ -173,11 +174,9 @@ void *median(void *a) {
         }
     } else
     if (plus_i >= size_y) {  //down
-        //std::cout << "down\n";
         i_out = plus_i - size_y + 1;
 
         if (minus_j >= 0) {  //only down
-            //std::cout << "Its only down\n";
             j_out = 0;
             out_items = i_out * (window - j_out) + j_out * (window - i_out) + i_out * j_out;
 
@@ -193,7 +192,6 @@ void *median(void *a) {
             }
         } else
         if (minus_j < 0) {  //left down
-            //std::cout << "Its left down\n";
             j_out = -minus_j;
 
             out_items = i_out * (window - j_out) + j_out * (window - i_out) + i_out * j_out;
@@ -212,7 +210,6 @@ void *median(void *a) {
         }
     } else
     if (minus_j < 0) {  //left only
-        //std::cout << "Its left\n";
         i_out = 0;
         j_out = -minus_j;
 
@@ -229,7 +226,6 @@ void *median(void *a) {
             }
         }
     } else {    //neechego ne podoshlo
-        //std::cout << "Ono vnutri!\n";
         for (int i = elem_i - window / 2; i <= elem_i + window / 2; ++i) {
             for (int j = elem_j - window / 2; j <= elem_j + window / 2; ++j) {
                 arr[arr_i] = matrix[i][j];
@@ -239,29 +235,13 @@ void *median(void *a) {
     }
 
     //on this point we have unsorted array of integer arr[]
-    // std::cout << "arr is:\n";
-    // for (int i = 0; i < window * window; ++i) {
-    //     std::cout << arr[i] << ' ';
-    // }
-    // std::cout << std::endl;
 
     sort(arr, window * window);
 
-    // std::cout << "sorted arr is:\n";
-    // for (int i = 0; i < window * window; ++i) {
-    //     std::cout << arr[i] << ' ';
-    // }
-    // std::cout << std::endl;
-
     int med = arr[window * window / 2];
-
-    // std::cout << "med is: " << med << std::endl;
 
     free(arr);
 
-    //std::cout << "freed arr in median\n";
-
-    //return med;
     arg->med = med;
 
     return 0;
@@ -277,64 +257,59 @@ int main(int argc, char * argv[]) {
 
     int size_x, size_y;
 
-    std::ifstream fin;
-    fin.open("in.txt");
+    FILE* fin;
+    fin = fopen("in.txt", "r");
+    if (fin == NULL) {
+        printf("Error opening file, try to start ./mg first\n");
+    }
 
     //matrix input
-    fin >> size_y;
-    fin >> size_x;
+    fscanf(fin, "%d", &size_y);
+    fscanf(fin, "%d", &size_x);
 
     int ** matrix = (int**)malloc(sizeof(int*) * size_y);
     if (matrix == NULL) {
-        std::cout << "matrix malloc error in main()\n";
+        printf("matrix malloc error in main()\n");
         return 1;
     }
 
     for (int i = 0; i < size_y; ++i) {
         matrix[i] = (int*)malloc(sizeof(int) * size_x);
         if (matrix[i] == NULL) {
-            std::cout << "matrix malloc error in main()\n";
+            printf("matrix malloc error in main()\n");
             return 1;
         }
     }
 
     for (int i = 0; i < size_y; ++i) {
         for (int j = 0; j < size_x; ++j) {
-            fin >> matrix[i][j];
+            fscanf(fin, "%d", &matrix[i][j]);
         }
     }
-    //echo
-    // std::cout << "Matrix is:\n";
-    // for (int i = 0; i < size_y; ++i) {
-    //     for (int j = 0; j < size_x; ++j) {
-    //         std::cout << matrix[i][j] << ' ';
-    //     }
-    //     std::cout << std::endl;
-    // }
 
     int window;
-    std::cout << "Enter window size. It has to be positive odd integer\n";
-    std::cin >> window;
+    printf("Enter window size. It has to be positive odd integer\n");
+    scanf("%d", &window);
     if (window < 0 || (window % 2 == 0)) {
-        std::cout << "Wrong window size! Shutting down...\n";
+        printf("Wrong window size! Shutting down...\n");
         return -1;
     }
 
     int k;
-    std::cout << "Enter K\n";
-    std::cin >> k;
+    printf("Enter K\n");
+    scanf("%d", &k);
     //Соображения такие: в цикле от 0 до кол-во элементов
     //cthreads -- кол-во потоков
     int ** matrix2 = (int**)malloc(sizeof(int*) * size_y);
     if (matrix2 == NULL) {
-        std::cout << "matrix malloc error in main()\n";
+        printf("matrix malloc error in main()\n");
         return 1;
     }
 
     for (int i = 0; i < size_y; ++i) {
         matrix2[i] = (int*)malloc(sizeof(int) * size_x);
         if (matrix2[i] == NULL) {
-            std::cout << "matrix malloc error in main()\n";
+            printf("matrix malloc error in main()\n");
             return 1;
         }
     }
@@ -361,7 +336,7 @@ int main(int argc, char * argv[]) {
                 a[m].elem_j = (j + m) % size_x;
                 status = pthread_create(&threads[m], NULL, median, (void*) &a[m]);
                 if (status != 0) {
-                    std::cout << "Error creating thread in main()\n";
+                    printf("Error creating thread in main()\n");
                     return 2;
                 }
             }
@@ -371,14 +346,14 @@ int main(int argc, char * argv[]) {
                 status = pthread_join(threads[m], NULL);
 
                 if (status != 0) {
-                    std::cout << "Error joining thread in main()\n";
+                    printf("Error joining thread in main()\n");
                     return 3;
                 }
 
                 matrix2[(j + m) / size_x][(j + m) % size_x] = a[m].med;
             }
         }
-
+        //Если количество элементов матрицы не кратно количеству потоков
         if (j < size_x * size_y) {
             for (int m = j; m < size_x * size_y; ++m) {
                 //start thread
@@ -386,17 +361,17 @@ int main(int argc, char * argv[]) {
                 a[m].elem_j = (j + m) % size_x;
                 status = pthread_create(&threads[m], NULL, median, (void*) &a[m]);
                 if (status != 0) {
-                    std::cout << "Error creating thread in main()\n";
+                    printf("Error creating thread in main()\n");
                     return 2;
                 }
             }
             //wait for all the threads to finish
             //put all the results in 2nd matrix
-            for (int m = 0; m < cthreads; ++m) {
+            for (int m = 0; m < size_x * size_y - j; ++m) {
                 status = pthread_join(threads[m], NULL);
 
                 if (status != 0) {
-                    std::cout << "Error joining thread in main()\n";
+                    printf("Error joining thread in main()\n");
                     return 3;
                 }
 
@@ -410,33 +385,31 @@ int main(int argc, char * argv[]) {
 
     time = clock() - time;
 
-    std::cout << "Multi-thread ticks = " << time << " (" << (float)time / CLOCKS_PER_SEC << " sec)\n";
+    printf("Multi-thread ticks = %d, (%f sec)\n", time, ((float)time / CLOCKS_PER_SEC));
 
-    std::ofstream fout("out.txt");
+    FILE* fout = fopen("out.txt", "w");
 
     for (int i = 0; i < size_y; ++i) {
         for (int j = 0; j < size_x; ++j) {
-            fout << matrix[i][j] << ' ';
+            fprintf(fout, "%d ", matrix[i][j]);
         }
-        fout << '\n';
+        fprintf(fout, "\n");
     }
 
 
     for (int i = 0; i < size_y; ++i) {
         free(matrix[i]);
-        //std::cout << "freed matrix[" << i << "]\n";
     }
     free(matrix);
 
     for (int i = 0; i < size_y; ++i) {
         free(matrix2[i]);
-        //std::cout << "freed matrix[" << i << "]\n";
     }
     free(matrix2);
     free(threads);
     free(a);
-    fin.close();
-    fout.close();
+    fclose(fin);
+    fclose(fout);
 
     return 0;
 }
