@@ -1,7 +1,7 @@
 all: prog matr_gen
 
-prog: a.cpp
-	g++ -pthread -o a.out a.cpp
+prog: a.c
+	gcc -pthread -o a.out a.c
 
 matr_gen: matr_gen.cpp
 	g++ -o mg matr_gen.cpp
