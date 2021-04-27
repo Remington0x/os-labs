@@ -58,35 +58,53 @@ My variant is 34
 
 #include <iostream>
 #include "topology.hpp"
+#include "search.hpp"
 
 int main() {
-    std::shared_ptr< topology_t<int> > Item(new topology_t<int>());
-    int q;
-    std::cout << "Enter command:\n1 -- add node\n2 -- del node\n3 -- print tree\n";
-    int key;
-    while (scanf("%d", &q) > 0) {
-        switch (q) {
-            case 1:
-                std::cout << "Enter key for new node\n";
-                std::cin >> key;
-                Item->add(key);
-                break;
-            case 2:
-                std::cout << "Enter key for node to delete\n";
-                std::cin >> key;
-                Item->rm(key);
-                break;
-            case 3:
-                Item->print();
-                break;
-            default:
-                std::cout << "No command found\n";
-                break;
-        }
-        std::cout << "Enter command:\n1 -- add node\n2 -- del node\n3 -- print tree\n";
+    //std::shared_ptr< topology_t<int> > Item(new topology_t<int>());
+    // topology_t<int>* Item = new topology_t<int>();
+    //
+    // int q;
+    // std::cout << "Enter command:\n1 -- add node\n2 -- del node\n3 -- print tree\n";
+    // int key;
+    // while (scanf("%d", &q) > 0) {
+    //     switch (q) {
+    //         case 1:
+    //             std::cout << "Enter key for new node\n";
+    //             std::cin >> key;
+    //             Item->add(key);
+    //             break;
+    //         case 2:
+    //             std::cout << "Enter key for node to delete\n";
+    //             std::cin >> key;
+    //             Item->rm(key);
+    //             break;
+    //         case 3:
+    //             Item->print();
+    //             break;
+    //         default:
+    //             std::cout << "No command found\n";
+    //             break;
+    //     }
+    //     std::cout << "Enter command:\n1 -- add node\n2 -- del node\n3 -- print tree\n";
+    // }
+    // delete Item;
+
+    std::cout << "Search test, input haystack\n";
+    std::string haystack, needle;
+    std::cin >> haystack;
+    std::cout << "Input needle\n";
+    std::cin >> needle;
+
+    std::cout << "Haystack: " << haystack << "\nNeedle: " << needle << std::endl;
+
+    std::vector<unsigned int> a = naive_search(needle, haystack);
+    std::cout << "Output:\n";
+    //std::cout << "a.size = " << a.size() << std::endl;
+    for (unsigned int elem : a) {
+        std::cout << elem << ";";
     }
-
-
+    std::cout << "\n";
 
 
 
