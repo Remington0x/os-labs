@@ -147,7 +147,7 @@ public:
         full_clear(&root);
     }
 
-    btNode_t<T>* find(T & key) {
+    btNode_t<T>* look_up(T & key) {
         return find_rec(root, key);
     }
 

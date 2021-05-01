@@ -6,6 +6,7 @@
 #include <assert.h>
 
 const int WAIT_TIME = 1000;
+const int BASE_PORT = 8000;
 
 enum actions_t {
 	fail    = 0,
