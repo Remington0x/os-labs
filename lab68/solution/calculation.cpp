@@ -149,8 +149,79 @@ int main(int argc, char* argv[]) {
                     if (has_child) {
                         node_token_t* token_bind = new node_token_t({bind, token.id, child_id});
                         node_token_t reply_bind({fail, token.id, token.id});
-
+                        ok = zmq::send_recieve_wait(token_bind, reply_bind, node_socket);
+                        ok = ok and (reply_bind.action == success);
                     }
+                    if (ok) {
+                        node_token_t* token_poing = new node_token_t({ping, token.id, token.id});
+                        node_token_t reply_ping({fail, token.id, token.id});
+                        ok = zmq::send_recieve_wait(token_ping, reply_ping, node_socket);
+                        ok = ok and (reply_ping.action == success);
+                        if (ok) {
+                            reply->action = success;
+                            child_id = token.id;
+                            has_child = true;
+                        } else {
+                            rc = zmq_close(node_socket);
+                            assert(rc == 0);
+                            rc = zmq_ctx_term(node_context);
+                            assert(rc == 0);
+                        }
+                    }
+                }
+            } else if (has_child) {
+                node_token_t* token_down = new node_token_t(token);
+                node_token_t reply_down(token);
+                reply_down.action = fail;
+                if (zmq::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
+                    *reply = reply_down;
+                }
+            }
+        } else if (token.action == ping) {
+            if (token.id == node_id) {
+                reply->action = success;
+            } else if (has_child) {
+                node_token_t* token_down = new node_token_t(token);
+                node_token_t reply_down(token);
+                reply_down.action = fail;
+                if (zmq::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
+                    *reply = reply_down;
+                }
+            }
+        } else if (token.action == destroy) {
+            if (has_child) {
+                if (token.id == child_id) {
+                    bool ok = true;
+                    node_token_t* token_down = new node_token_t({destroy, node_id, node_id});
+                    node_token_t reply_down({fail, child_id, child_id});
+                    ok = zmq::send_recieve_wait(token_down, reply_down, node_socket);
+                    if (reply_down.action == destroy and reply_down.parent == child_id) {
+                        rc = zmq_close(node_socket);
+                        assert(rc == 0);
+                        rc = zmq_ctx_term(node_context);
+                        assert(rc == 0);
+                        has_child = false;
+                        child_id = -1;
+                    } else if (reply_down.action == bind and reply_down.parent_id == node_id) {
+                        rc = zmq_close(node_socket);
+                        assert(rc == 0);
+                        rc = zmq_ctx_term(node_context);
+                        assert(rc == 0);
+                        zmq::init_pair_socket(node_context, node_socket);
+                        rc = zmq_bind(node_socket, ("tcp://*:" + std::to_string(PORT_BASE + reply_down.id)).c_str());
+                        assert(rc == 0);
+                        child_id = reply_down.id;
+                        node_token_t* token_ping = new node_token_t({ping, child_id, child_id});
+                        node_token_t reply_ping({fail, child_id, child_id});
+                        if (zmq::send_recieve_wait(token_ping, reply_ping, node_socket) and reply_ping.action == success) {
+                            ok = true;
+                        }
+                    }
+                    if (ok) {
+                        reply->action = success;
+                    }
+                } else if (token.id == node_id) {
+                    
                 }
             }
         }
