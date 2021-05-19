@@ -221,20 +221,88 @@ int main(int argc, char* argv[]) {
                         reply->action = success;
                     }
                 } else if (token.id == node_id) {
-                    
+                    rc = zmq_close(node_socket);
+                    assert(rc == 0);
+                    rc = zmq_ctx_term(node_context);
+                    assert(rc == 0);
+                    has_child = false;
+                    reply->action = bind;
+                    reply->id = child_id;
+                    reply->parent_id = token.parent_id;
+                    awake = false;
+                } else {
+                    node_token_t* token_down = new node_token_t(token);
+                    node_token_t reply_down(token);
+                    reply_down.action = fail;
+                    if (zmq_std::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
+						*reply = reply_down;
+					}
                 }
+            } else if (token.id == node_id) {
+                reply->action = destroy;
+                reply->parent_id = node_id;
+                reply->id = node_id;
+                awake = false;
+            }
+        } else if (token.action == exec) {
+            if (token.id == node_id) {
+                char c = token.parent_id;
+                if (c == SENTINEL) {
+                    if (flag_sentinel) {
+                        std::swap(haystack, needle);
+                    } else {
+                        pthread_mutex_lock(&mutex);
+                        if (calc_queue.empty()) {
+                            pthread_cond_signal(&cond);
+                        }
+                        calc_queue.push({pattern, text});
+                        pthread_mutex_unlockz(&mutex);
+                        text.clear();
+                        pattern.clear();
+                    }
+                    flag_sentinel = flag_sentinel ^ 1;
+                } else {
+                    text = text + c;
+                }
+                reply->action = success;
+            } else if (has_child) {
+                node_token_t* token_down = new node_token_t(token);
+                node_token_t reply_down(token);
+                reply_down.action = fail;
+                if (zmq_std::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
+					*reply = reply_down;
+				}
             }
         }
+        zmq::send_msg_dontwait(reply, node_parent_socket);
     }
 
+    if (has_child) {
+        rc = zmq_close(node_socket);
+		assert(rc == 0);
+		rc = zmq_ctx_term(node_context);
+		assert(rc == 0);
+    }
 
+    rc = zmq_close(node_parent_socket);
+	assert(rc == 0);
+	rc = zmq_ctx_term(node_parent_context);
+	assert(rc == 0);
 
+	pthread_mutex_lock(&mutex);
+	if (calc_queue.empty()) {
+		pthread_cond_signal(&cond);
+	}
+	calc_queue.push({SENTINEL_STR, SENTINEL_STR});
+	pthread_mutex_unlock(&mutex);
 
+	rc = pthread_join(calculation_thread, NULL);
+	assert(rc == 0);
 
-
-
-
-
+	rc = pthread_cond_destroy(&cond);
+	assert(rc == 0);
+	rc = pthread_mutex_destroy(&mutex);
+	assert(rc == 0);
 
     return 0;
 }
