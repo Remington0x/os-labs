@@ -2,167 +2,86 @@
 #define TOPOLOGY_HPP
 
 #include <iostream>
-#include <memory>
+#include <list>
 
-template <class T>
-class btNode_t {
-public:
-    T key;
-    btNode_t<T>* left;
-    btNode_t<T>* right;
-    btNode_t(T k) : key(k), left(nullptr), right(nullptr) {};
-    ~btNode_t() {};
-};
-
-//yet T is key type
-//if T will become a complex class replace "->key" with the "->key->k" for key
-//for T must be defined following operations:
-// == < >
-template <class T>
+template<class T>
 class topology_t {
 private:
-    void add_rec(btNode_t<T>** ptr2, T & key) {
-        if ((*ptr2) == nullptr) {
-            (*ptr2) = new btNode_t<T>(key);
-        } else if (key < (*ptr2)->key) {
-            add_rec(&(*ptr2)->left, key);
-        } else if (key > (*ptr2)->key) {
-            add_rec(&(*ptr2)->right, key);
-        } else {
-            std::cout << "Node with key " << key << " already exists\n";
-        }
-    }
+	using list_type = std::list< std::list<T> >;
+	using iterator = typename std::list<T>::iterator;
+	using list_iterator = typename list_type::iterator;
 
-    btNode_t<T>* find_rec(btNode_t<T>* ptr, T & key) {
-        btNode_t<T>* ptr1 = nullptr;
-
-        if (ptr->key == key) {
-            return ptr;
-        } else {
-            if (ptr->left != nullptr) {
-                ptr1 = find_rec(ptr->left, key);
-            }
-
-            if (ptr1 != nullptr) {
-                return ptr1;
-            }
-
-            if (ptr->right != nullptr) {
-                ptr1 = find_rec(ptr->right, key);
-            }
-
-            return ptr1;
-        }
-    }
-
-    void rm_node(btNode_t<T>** ptr2) {
-        btNode_t<T>* ptr;
-        //there are three cases
-        //1. no children
-        //2. one child
-        //3. both children
-
-        //1.
-        if ((*ptr2) != nullptr) {
-            if ((*ptr2)->left == nullptr) {
-                if ((*ptr2)->right == nullptr) {
-                    //1.
-                    //std::cout << "Found node " << (*ptr2)->key << ", deleting\n";
-                    ptr = *ptr2;
-                    *ptr2 = nullptr;
-                    delete ptr;
-                } else {
-                    //2. there is no left child
-                    ptr = *ptr2;
-                    *ptr2 = (*ptr2)->right;
-                    delete ptr;
-                }
-            } else
-            if ((*ptr2)->right == nullptr) {
-                //2. there is no right child
-                ptr = *ptr2;
-                *ptr2 = (*ptr2)->left;
-                delete ptr;
-            } else {
-                //3.
-                ptr = (*ptr2);
-                if (ptr->left->right == nullptr) {
-                    (*ptr2)->key = ptr->left->key;
-                    btNode_t<T>* buff = ptr->left;
-                    (*ptr2)->left = (*ptr2)->left->left;
-                    delete buff;
-                } else {
-                    ptr = ptr->left;
-                    while (ptr->right->right != nullptr) {
-                        ptr = ptr->right;
-                    }
-
-                    (*ptr2)->key = ptr->right->key;
-                    btNode_t<T>* buff = ptr->right;
-                    ptr->right = ptr->right->left;
-                    delete buff;
-                }
-            }
-        }
-    }
-
-    void rm_rec(btNode_t<T>** ptr2, T & key) {
-        if ((*ptr2) != nullptr) {
-            if ((*ptr2)->key == key) {
-                rm_node(ptr2);
-            } else if (key < (*ptr2)->key) {
-                rm_rec(&(*ptr2)->left, key);
-            } else if (key > (*ptr2)->key) {
-                rm_rec(&(*ptr2)->right, key);
-            }
-        }
-    }
-
-    void print_rec(btNode_t<T>* node, int tab) {
-        if (node->right != nullptr) {
-            print_rec(node->right, tab + 1);
-        }
-        for (int i = 0; i < tab; ++i) {
-            std::cout << "  ";
-        }
-        std::cout << node->key << std::endl;
-        if (node->left != nullptr) {
-            print_rec(node->left, tab + 1);
-        }
-    }
-
-    void full_clear(btNode_t<T>** ptr) {
-        if (*ptr == nullptr) {
-            return;
-        }
-        full_clear(&(*ptr)->left);
-        full_clear(&(*ptr)->right);
-        delete *ptr;
-    }
-
+	list_type container;
+	size_t container_size;
 public:
-    btNode_t<T>* root;
-    topology_t() : root(nullptr) {}
-    ~topology_t() {
-        full_clear(&root);
-    }
+	explicit topology_t() noexcept : container(), container_size(0) {}
+	~topology_t() {}
 
-    btNode_t<T>* look_up(T & key) {
-        return find_rec(root, key);
-    }
+	bool erase(const T & elem) {
+		for (list_iterator it1 = container.begin(); it1 != container.end(); ++it1) {
+			for (iterator it2 = it1->begin(); it2 != it1->end(); ++it2) {
+				if (*it2 == elem) {
+					if (it1->size() > 1) {
+						it1->erase(it2);
+					} else {
+						container.erase(it1);
+					}
+					--container_size;
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 
-    void add(T & key) {
-        add_rec(&root, key);
-    }
+	long long find(const T & elem) {
+		long long ind = 0;
+		for (list_iterator it1 = container.begin(); it1 != container.end(); ++it1) {
+			for (iterator it2 = it1->begin(); it2 != it1->end(); ++it2) {
+				if (*it2 == elem) {
+					return ind;
+				}
+			}
+			++ind;
+		}
+		return -1;
+	}
 
-    void rm(T & key) {
-        rm_rec(&root, key);
-    }
+	bool insert(const T & parent, const T & elem) {
+		for (list_iterator it1 = container.begin(); it1 != container.end(); ++it1) {
+			for (iterator it2 = it1->begin(); it2 != it1->end(); ++it2) {
+				if (*it2 == parent) {
+					it1->insert(++it2, elem);
+					++container_size;
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 
-    void print() {
-        print_rec(root, 0);
-    }
+	void insert(const T & elem) {
+		std::list<T> new_list;
+		new_list.push_back(elem);
+		++container_size;
+		container.push_back(new_list);
+	}
 
+	size_t size() {
+		return container_size;
+	}
+
+	template<class U>
+	friend std::ostream & operator << (std::ostream & of, const topology_t<U> & top) {
+		for (auto it1 = top.container.begin(); it1 != top.container.end(); ++it1) {
+			of << "{";
+			for (auto it2 = it1->begin(); it2 != it1->end(); ++it2) {
+				of << *it2 << " ";
+			}
+			of << "}" << std::endl;
+		}
+		return of;
+	}
 };
 
 #endif

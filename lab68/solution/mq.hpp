@@ -7,6 +7,8 @@
 
 const int WAIT_TIME = 1000;
 const int BASE_PORT = 8000;
+const char SENTINEL = '$';
+const char* NODE_EXECUTABLE_NAME = "calculation";
 
 enum actions_t {
 	fail    = 0,
@@ -25,7 +27,7 @@ struct node_token_t {
 	long long parent_id, id;
 };
 
-namespase zmq {
+namespace mq {
     void init_pair_socket(void* &context, void* &socket) {
         int rc;
         context = zmq_ctx_new();

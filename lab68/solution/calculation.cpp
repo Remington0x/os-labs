@@ -9,6 +9,7 @@
 
 const std::string SENTINEL_STR = "$";
 
+
 long long node_id;
 pthread_mutex_t mutex;
 pthread_cond_t cond;
@@ -37,7 +38,7 @@ void* thread_func(void*) {
             pthread_mutex_unlock(&mutex);
         }
     }
-    return 0;
+    return NULL;
 }
 
 int main(int argc, char* argv[]) {
@@ -47,7 +48,7 @@ int main(int argc, char* argv[]) {
 
     void* node_parent_context = zmq_ctx_new();
     void* node_parent_socket = zmq_socket(node_parent_context, ZMQ_PAIR);
-    rc = zmq_connect(node_parent_socket, ("tcp://localhost:" + std::to_string(PORT_BASE + node_id)).c_str());
+    rc = zmq_connect(node_parent_socket, ("tcp://localhost:" + std::to_string(BASE_PORT + node_id)).c_str());
     assert(rc == 0);
 
     long long child_id = -1;
@@ -59,13 +60,13 @@ int main(int argc, char* argv[]) {
     assert(rc == 0);
     rc = pthread_cond_init(&cond, NULL);
     assert(rc == 0);
-    rc = pthread_create(&calculation_thread, NULL, thread_func, NULL);
+    rc = pthread_create(&calc_thread, NULL, thread_func, NULL);
     assert(rc == 0);
 
     std::string needle, haystack;
     bool flag_sentinel = true;
     node_token_t* info_token = new node_token_t({info, getpid(), getpid()});
-    zmq::send_msg_dontwait(info_token, node_parent_socket);
+    mq::send_msg_dontwait(info_token, node_parent_socket);
 
     std::list<unsigned int> cur_calculated;
 
@@ -74,7 +75,7 @@ int main(int argc, char* argv[]) {
     bool calc = true;
     while (awake) {
         node_token_t token;
-        zmq::recieve_msg(token, node_parent_socket);
+        mq::receive_msg(token, node_parent_socket);
 
         node_token_t* reply = new node_token_t({fail, node_id, node_id});
 
@@ -85,7 +86,7 @@ int main(int argc, char* argv[]) {
                     if (done_queue.empty()) {
                         reply->action = exec;
                     } else {
-                        cur_calculated = done_queue.fornt();
+                        cur_calculated = done_queue.front();
                         done_queue.pop();
                         reply->action = success;
                         reply->id = getpid();
@@ -98,7 +99,7 @@ int main(int argc, char* argv[]) {
                         reply->id = cur_calculated.front();
                         cur_calculated.pop_front();
                     } else {
-                        reply->acton = exec;
+                        reply->action = exec;
                         calc = true;
                     }
                 }
@@ -106,20 +107,20 @@ int main(int argc, char* argv[]) {
                 node_token_t* token_down = new node_token_t(token);
                 node_token_t reply_down(token);
                 reply_down.action = fail;
-                if (zmq::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
+                if (mq::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
                     *reply = reply_down;
                 }
             }
         } else if (token.action == bind and token.parent_id == node_id) {
-            zmq::init_pair_socket(node_context, node_socket);
-            rc = zmq_bind(node_socket, ("tcp://*:" + std::to_string(PORT_BASE + token.id)).c_str());
+            mq::init_pair_socket(node_context, node_socket);
+            rc = zmq_bind(node_socket, ("tcp://*:" + std::to_string(BASE_PORT + token.id)).c_str());
             assert(rc == 0);
             has_child = true;
             child_id = token.id;
             node_token_t* token_ping = new node_token_t({ping, child_id, child_id});
             node_token_t reply_ping({fail, child_id, child_id});
-            if (zmq::send_recieve_wait(token_ping, reply_ping, node_socket) and reply_ping.action == success) {
-                reply.action = success;
+            if (mq::send_recieve_wait(token_ping, reply_ping, node_socket) and reply_ping.action == success) {
+                reply->action = success;
             }
         } else if (token.action == create) {
             if (token.parent_id = node_id) {
@@ -129,8 +130,8 @@ int main(int argc, char* argv[]) {
 					rc = zmq_ctx_term(node_context);
 					assert(rc == 0);
                 }
-                zmq::init_pair_socket(node_context, node_socket);
-                rc = zmq_bind(node_socket, ("tcp://*:" + std::to_string(PORT_BASE + token.id)).c_str());
+                mq::init_pair_socket(node_context, node_socket);
+                rc = zmq_bind(node_socket, ("tcp://*:" + std::to_string(BASE_PORT + token.id)).c_str());
                 assert(rc == 0);
 
                 int fork_id = fork();
@@ -141,7 +142,7 @@ int main(int argc, char* argv[]) {
                 } else {
                     bool ok = true;
                     node_token_t reply_info({fail, token.id, token.id});
-                    ok = zmq::recieve_msg_wait(reply_info, node_socket);
+                    ok = mq::recieve_msg_wait(reply_info, node_socket);
                     if (reply_info.action != fail) {
                         reply->id = reply_info.id;
                         reply->parent_id = reply_info.parent_id;
@@ -149,13 +150,13 @@ int main(int argc, char* argv[]) {
                     if (has_child) {
                         node_token_t* token_bind = new node_token_t({bind, token.id, child_id});
                         node_token_t reply_bind({fail, token.id, token.id});
-                        ok = zmq::send_recieve_wait(token_bind, reply_bind, node_socket);
+                        ok = mq::send_recieve_wait(token_bind, reply_bind, node_socket);
                         ok = ok and (reply_bind.action == success);
                     }
                     if (ok) {
-                        node_token_t* token_poing = new node_token_t({ping, token.id, token.id});
+                        node_token_t* token_ping = new node_token_t({ping, token.id, token.id});
                         node_token_t reply_ping({fail, token.id, token.id});
-                        ok = zmq::send_recieve_wait(token_ping, reply_ping, node_socket);
+                        ok = mq::send_recieve_wait(token_ping, reply_ping, node_socket);
                         ok = ok and (reply_ping.action == success);
                         if (ok) {
                             reply->action = success;
@@ -173,7 +174,7 @@ int main(int argc, char* argv[]) {
                 node_token_t* token_down = new node_token_t(token);
                 node_token_t reply_down(token);
                 reply_down.action = fail;
-                if (zmq::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
+                if (mq::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
                     *reply = reply_down;
                 }
             }
@@ -184,7 +185,7 @@ int main(int argc, char* argv[]) {
                 node_token_t* token_down = new node_token_t(token);
                 node_token_t reply_down(token);
                 reply_down.action = fail;
-                if (zmq::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
+                if (mq::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
                     *reply = reply_down;
                 }
             }
@@ -194,8 +195,8 @@ int main(int argc, char* argv[]) {
                     bool ok = true;
                     node_token_t* token_down = new node_token_t({destroy, node_id, node_id});
                     node_token_t reply_down({fail, child_id, child_id});
-                    ok = zmq::send_recieve_wait(token_down, reply_down, node_socket);
-                    if (reply_down.action == destroy and reply_down.parent == child_id) {
+                    ok = mq::send_recieve_wait(token_down, reply_down, node_socket);
+                    if (reply_down.action == destroy and reply_down.parent_id == child_id) {
                         rc = zmq_close(node_socket);
                         assert(rc == 0);
                         rc = zmq_ctx_term(node_context);
@@ -207,13 +208,13 @@ int main(int argc, char* argv[]) {
                         assert(rc == 0);
                         rc = zmq_ctx_term(node_context);
                         assert(rc == 0);
-                        zmq::init_pair_socket(node_context, node_socket);
-                        rc = zmq_bind(node_socket, ("tcp://*:" + std::to_string(PORT_BASE + reply_down.id)).c_str());
+                        mq::init_pair_socket(node_context, node_socket);
+                        rc = zmq_bind(node_socket, ("tcp://*:" + std::to_string(BASE_PORT + reply_down.id)).c_str());
                         assert(rc == 0);
                         child_id = reply_down.id;
                         node_token_t* token_ping = new node_token_t({ping, child_id, child_id});
                         node_token_t reply_ping({fail, child_id, child_id});
-                        if (zmq::send_recieve_wait(token_ping, reply_ping, node_socket) and reply_ping.action == success) {
+                        if (mq::send_recieve_wait(token_ping, reply_ping, node_socket) and reply_ping.action == success) {
                             ok = true;
                         }
                     }
@@ -234,7 +235,7 @@ int main(int argc, char* argv[]) {
                     node_token_t* token_down = new node_token_t(token);
                     node_token_t reply_down(token);
                     reply_down.action = fail;
-                    if (zmq_std::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
+                    if (mq::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
 						*reply = reply_down;
 					}
                 }
@@ -255,26 +256,26 @@ int main(int argc, char* argv[]) {
                         if (calc_queue.empty()) {
                             pthread_cond_signal(&cond);
                         }
-                        calc_queue.push({pattern, text});
-                        pthread_mutex_unlockz(&mutex);
-                        text.clear();
-                        pattern.clear();
+                        calc_queue.push({needle, haystack});
+                        pthread_mutex_unlock(&mutex);
+                        haystack.clear();
+                        needle.clear();
                     }
                     flag_sentinel = flag_sentinel ^ 1;
                 } else {
-                    text = text + c;
+                    haystack = haystack + c;
                 }
                 reply->action = success;
             } else if (has_child) {
                 node_token_t* token_down = new node_token_t(token);
                 node_token_t reply_down(token);
                 reply_down.action = fail;
-                if (zmq_std::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
+                if (mq::send_recieve_wait(token_down, reply_down, node_socket) and reply_down.action == success) {
 					*reply = reply_down;
 				}
             }
         }
-        zmq::send_msg_dontwait(reply, node_parent_socket);
+        mq::send_msg_dontwait(reply, node_parent_socket);
     }
 
     if (has_child) {
@@ -296,7 +297,7 @@ int main(int argc, char* argv[]) {
 	calc_queue.push({SENTINEL_STR, SENTINEL_STR});
 	pthread_mutex_unlock(&mutex);
 
-	rc = pthread_join(calculation_thread, NULL);
+	rc = pthread_join(calc_thread, NULL);
 	assert(rc == 0);
 
 	rc = pthread_cond_destroy(&cond);
